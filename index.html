@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <title>Päivän tila - Slideshow</title>
+    <style>
+        :root{
+            --green: #2ebd6b;
+            --green-dark: #1b8f45;
+            --bg: #f4f6f4;
+            --card: #ffffff;
+            --muted: #6b7a6b;
+            --radius: 12px;
+        }
+        body {
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 0;
+            color: #12351d;
+            position: relative; /* for overlay pseudo */
+        }
+        /* Full-page background image with subtle dark overlay for readability */
+        body {
+            background-image: url('Kuvat/nurmipelto.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-color: var(--bg);
+        }
+        body::before{
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.18);
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* Ensure the slideshow container sits above the overlay */
+        .slideshow-container{ position: relative; z-index: 1; }
+        .slideshow-container {
+            max-width: 760px;
+            margin: 60px auto;
+            background: linear-gradient(180deg, var(--card), #f8fff8);
+            box-shadow: 0 10px 30px rgba(16,28,16,0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(27, 128, 60, 0.06);
+        }
+        .slide {
+            display: none;
+            padding: 48px 36px;
+            text-align: center;
+            font-size: 1.25rem;
+            line-height: 1.45;
+            color: #12351d;
+            min-height: 180px;
+        }
+        .active {
+            display: block;
+        }
+        .slide h2{
+            margin: 0 0 10px 0;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #0f3a18;
+            letter-spacing: 0.02em;
+        }
+        .slide p{
+            margin: 0;
+            color: var(--muted);
+            font-size: 1rem;
+        }
+        /* Panel behind slide text */
+        .slide-panel{
+            display:inline-block;
+            background: rgba(255,255,255,0.96);
+            padding: 18px 22px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(6,20,10,0.12);
+            max-width: min(820px, 86%);
+            text-align: left;
+        }
+        .slide-panel h2{ margin:0 0 8px 0; }
+        .slide-panel p{ margin:0; }
+        .dots {
+            text-align: center;
+            padding: 14px 0 20px 0;
+            background: transparent;
+        }
+        .dot {
+            height: 12px;
+            width: 12px;
+            margin: 0 6px;
+            background-color: rgba(34,100,34,0.12);
+            border-radius: 50%;
+            display: inline-block;
+            transition: background 0.25s, transform 0.18s;
+            cursor: pointer;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.04);
+        }
+        .dot.active {
+            background-color: var(--green);
+            transform: scale(1.15);
+            box-shadow: 0 8px 20px rgba(46,189,107,0.12);
+        }
+        .add-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: linear-gradient(180deg,#f6fff7,#ecfff0);
+            padding: 22px 24px;
+            border-bottom: 1px solid rgba(27,128,60,0.06);
+            align-items: stretch;
+        }
+        .add-form input, .add-form textarea {
+            padding: 12px 14px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(27,43,27,0.12);
+            background: #fff;
+            color: #0f3a18;
+            box-shadow: inset 0 1px 0 rgba(0,0,0,0.03);
+            transition: border-color .12s ease, box-shadow .12s ease;
+            resize: vertical;
+        }
+        .add-form input:focus, .add-form textarea:focus{
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 8px 20px rgba(46,189,107,0.09);
+        }
+        .add-form button {
+            background: var(--green-dark);
+            color: #fff;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            align-self: flex-start;
+            box-shadow: 0 8px 20px rgba(27,143,69,0.12);
+            transition: transform .12s ease, box-shadow .12s ease, background .12s;
+        }
+        .add-form button:hover{
+            transform: translateY(-2px);
+            background: var(--green);
+            box-shadow: 0 12px 28px rgba(27,143,69,0.14);
+        }
+        /* Task list styles */
+        .task-list{
+            padding: 18px 24px;
+            background: linear-gradient(180deg,#f8fff9,#f2fff6);
+            border-top: 1px solid rgba(27,128,60,0.04);
+        }
+        .task-item{
+            display:flex;align-items:center;justify-content:space-between;
+            gap:12px;padding:10px 12px;border-radius:10px;margin-bottom:8px;
+            background: #fff;border:1px solid rgba(27,43,27,0.06);
+            box-shadow: 0 3px 10px rgba(16,28,16,0.03);
+        }
+        .task-main{flex:1;min-width:0}
+        .task-title{font-weight:700;color:#0f3a18;margin-bottom:4px}
+        .task-content{color:var(--muted);font-size:0.95rem}
+        .task-actions{display:flex;gap:8px;margin-left:12px}
+        .task-actions button{border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+        .btn-done{background:var(--green);color:#fff}
+        .btn-delete{background:transparent;color:#9b2b2b;border:1px solid rgba(155,43,43,0.08)}
+        /* smaller screens */
+        @media (max-width: 600px){
+            .slideshow-container{ margin: 20px; border-radius: 12px; }
+            .slide{ padding: 28px 20px; font-size: 1.05rem; min-height: 140px; }
+            .add-form{ padding: 14px; }
+            .add-form button{ width: 100%; }
+        }
+
+        /* Wide / TV layout (16:9) */
+        @media (min-width: 1000px) {
+            .slideshow-container{
+                max-width: 1400px;
+                width: 96vw;
+                aspect-ratio: 16/9;
+                display: flex;
+                flex-direction: row;
+                align-items: stretch;
+                gap: 0;
+                padding: 0;
+            }
+            /* slides area to the left */
+            .slides-area{ width: 70%; padding: 0; display:flex; flex-direction:column; justify-content:center; }
+            #slides{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+            .slide{ padding: 48px 60px; text-align:left; min-height: auto; }
+            .slide h2{ font-size: 2.2rem; }
+            .slide p{ font-size: 1.15rem; }
+
+            /* right column for controls / task list */
+            .add-form{ width: 30%; min-width: 320px; box-sizing: border-box; padding: 28px; border-bottom: none; border-right: 1px solid rgba(27,128,60,0.04); border-left: none; }
+            .task-list{ width: 30%; box-sizing: border-box; padding: 20px 24px; height: 100%; overflow:auto; border-top: none; }
+
+            .dots{ position: absolute; left: 40px; bottom: 18px; right: auto; text-align: left; }
+
+            /* reduce rounded corners for full visual area */
+            .slideshow-container{ border-radius: 12px; }
+        }
+
+        /* Optional: TV fullscreen class to fit entire viewport */
+        body.tv-fullscreen{
+            margin:0;
+            height:100vh;
+            /* let the photo be full-screen background in TV mode */
+            background-image: url('Kuvat/nurmipelto.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+        }
+        body.tv-fullscreen .slideshow-container{
+            width:100vw;
+            height:100vh;
+            max-width:none;
+            border-radius:0;
+            box-shadow:none;
+            margin:0;
+            background: transparent; /* let underlying photo show through */
+            z-index: 2;
+        }
+
+        /* Display mode toggle button */
+        .display-toggle{ position:absolute; top:12px; right:12px; z-index:70; }
+        .display-toggle button{
+            background: rgba(0,0,0,0.55); color: #fff; border: none; padding: 8px 12px; border-radius: 10px;
+            cursor: pointer; font-weight:700; backdrop-filter: blur(4px);
+        }
+        .display-toggle button:hover{ background: rgba(0,0,0,0.7); }
+
+        /* When in TV fullscreen, hide controls and emphasize slide */
+        body.tv-fullscreen .add-form, body.tv-fullscreen .task-list, body.tv-fullscreen .dots{ display:none !important; }
+        body.tv-fullscreen .slides-area{ width:100%; padding:0; display:flex; align-items:center; justify-content:center; }
+        body.tv-fullscreen .slide{ text-align:center; color:#fff; }
+        body.tv-fullscreen .slide h2{ color:#fff; font-size:3.6rem; text-shadow:0 6px 26px rgba(0,0,0,0.6); }
+        body.tv-fullscreen .slide p{ color:rgba(255,255,255,0.92); font-size:1.6rem; text-shadow:0 4px 20px rgba(0,0,0,0.45); }
+        /* Fullscreen display: darker solid panel behind text for high contrast */
+        body.tv-fullscreen .slide-panel{
+            background: rgba(8,18,10,0.6); /* dark translucent */
+            max-width: 70%;
+            padding: 28px 36px;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+        }
+        body.tv-fullscreen .slide-panel h2, body.tv-fullscreen .slide-panel p{ color:#fff; text-shadow:none; }
+    </style>
+</head>
+<body>
+    <div class="slideshow-container" id="slideshow-container">
+        <div class="display-toggle" id="displayToggleWrap"><button id="displayToggleBtn" aria-pressed="false">Näyttötila</button></div>
+        <form class="add-form" id="addForm">
+            <input type="text" id="titleInput" placeholder="Otsikko (esim. Työ tai Ajankohtainen asia)" required>
+            <textarea id="contentInput" placeholder="Kuvaus..." rows="3" required></textarea>
+            <button type="submit">Lisää</button>
+        </form>
+        <div class="slides-area">
+            <div id="slides"></div>
+            <div class="dots" id="dots"></div>
+        </div>
+        <div class="task-list" id="taskList" aria-live="polite"></div>
+    </div>
+
+    <script>
+        let slidesData = [
+            { title: "Tervetuloa!", content: "Lisää päivän työt ja ajankohtaiset asiat yläpuolelta!" },
+            { title: "Esimerkki työ", content: "Suunnittele ja pidä tiimipalaveri klo 10:00." },
+            { title: "Ajankohtaista", content: "Muista palauttaa raportit torstaihin mennessä." }
+        ];
+
+        // Persistence key
+        const STORAGE_KEY = 'tyolistat_slides_v1';
+
+        function generateId(){ return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+        // Load saved slides if present, otherwise ensure initial slides have ids
+        (function loadSaved(){
+            try{
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if(raw){ slidesData = JSON.parse(raw); }
+                else { slidesData = slidesData.map(s=> ({ id: generateId(), ...s })); saveSlides(); }
+            }catch(e){ slidesData = slidesData.map(s=> ({ id: generateId(), ...s })); }
+        })();
+
+        function saveSlides(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(slidesData)); }
+
+        let slideIndex = 0;
+        let slideshowInterval;
+
+        function showSlides(n) {
+            const slidesContainer = document.getElementById("slides");
+            const dotsContainer = document.getElementById("dots");
+
+            slidesContainer.innerHTML = "";
+            dotsContainer.innerHTML = "";
+
+            slidesData.forEach((slide, i) => {
+                const slideDiv = document.createElement("div");
+                slideDiv.className = "slide" + (i === n ? " active" : "");
+                slideDiv.innerHTML = `<div class="slide-panel"><h2>${slide.title}</h2><p>${slide.content}</p></div>`;
+                slidesContainer.appendChild(slideDiv);
+
+                const dotSpan = document.createElement("span");
+                dotSpan.className = "dot" + (i === n ? " active" : "");
+                dotSpan.onclick = () => {
+                    slideIndex = i;
+                    showSlides(slideIndex);
+                    resetInterval();
+                };
+                dotsContainer.appendChild(dotSpan);
+            });
+
+            // If no slides, show placeholder
+            if(slidesData.length === 0){
+                slidesContainer.innerHTML = '<div class="slide active"><div class="slide-panel"><h2>Ei tehtäviä</h2><p>Lisää tehtävä yläreunan lomakkeella.</p></div></div>';
+            }
+
+            renderTaskList();
+        }
+        function renderTaskList(){
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            if(slidesData.length === 0){ list.innerHTML = '<p style="color:var(--muted);margin:0 0 8px 0">Ei näkyvissä olevia tehtäviä.</p>'; return; }
+            slidesData.forEach(item=>{
+                const el = document.createElement('div'); el.className='task-item';
+                const main = document.createElement('div'); main.className='task-main';
+                main.innerHTML = `<div class="task-title">${escapeHtml(item.title)}</div><div class="task-content">${escapeHtml(item.content)}</div>`;
+                const actions = document.createElement('div'); actions.className='task-actions';
+                const doneBtn = document.createElement('button'); doneBtn.className='btn-done'; doneBtn.textContent='Valmis';
+                doneBtn.onclick = ()=>{ markDone(item.id); };
+                const delBtn = document.createElement('button'); delBtn.className='btn-delete'; delBtn.textContent='Poista';
+                delBtn.onclick = ()=>{ deleteSlide(item.id); };
+                actions.appendChild(doneBtn); actions.appendChild(delBtn);
+                el.appendChild(main); el.appendChild(actions);
+                list.appendChild(el);
+            });
+        }
+
+        function deleteSlide(id){
+            const idx = slidesData.findIndex(s=> s.id === id);
+            if(idx === -1) return;
+            slidesData.splice(idx,1);
+            if(slideIndex >= slidesData.length) slideIndex = Math.max(0, slidesData.length-1);
+            saveSlides(); showSlides(slideIndex); resetInterval();
+        }
+
+        function markDone(id){
+            // remove when marked done
+            deleteSlide(id);
+        }
+
+        function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+
+        function nextSlide() {
+            slideIndex = (slideIndex + 1) % slidesData.length;
+            showSlides(slideIndex);
+        }
+
+        function resetInterval() {
+            clearInterval(slideshowInterval);
+            slideshowInterval = setInterval(nextSlide, 4000);
+        }
+
+        document.getElementById("addForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const title = document.getElementById("titleInput").value.trim();
+            const content = document.getElementById("contentInput").value.trim();
+            if(title && content) {
+                slidesData.push({ id: generateId(), title, content });
+                document.getElementById("titleInput").value = "";
+                document.getElementById("contentInput").value = "";
+                slideIndex = slidesData.length - 1;
+                saveSlides();
+                showSlides(slideIndex);
+                resetInterval();
+            }
+        });
+
+        // Initial call
+        showSlides(slideIndex);
+        renderTaskList();
+        slideshowInterval = setInterval(nextSlide, 4000);
+
+        // Display / TV mode functions
+        const displayBtn = document.getElementById('displayToggleBtn');
+        function updateDisplayBtn(){ displayBtn.textContent = document.body.classList.contains('tv-fullscreen') ? 'Poistu näyttötilasta' : 'Näyttötila'; displayBtn.setAttribute('aria-pressed', String(document.body.classList.contains('tv-fullscreen'))); }
+
+        async function enterDisplayMode(){
+            document.body.classList.add('tv-fullscreen');
+            updateDisplayBtn();
+            try{ if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); }catch(e){ /* ignore */ }
+            // enlarge font sizes and ensure current slide is visible
+            showSlides(slideIndex);
+        }
+        async function exitDisplayMode(){
+            document.body.classList.remove('tv-fullscreen');
+            updateDisplayBtn();
+            try{ if (document.fullscreenElement) await document.exitFullscreen(); }catch(e){ /* ignore */ }
+            showSlides(slideIndex);
+        }
+
+        function toggleDisplayMode(){ if (document.body.classList.contains('tv-fullscreen')) exitDisplayMode(); else enterDisplayMode(); }
+        displayBtn.addEventListener('click', toggleDisplayMode);
+
+        // auto-enter if URL indicates display mode
+        const params = new URLSearchParams(location.search);
+        if (params.get('display') === '1' || location.hash === '#display') { enterDisplayMode(); }
+
+        // keyboard shortcut: press 'v' to toggle display mode (when not typing)
+        document.addEventListener('keydown', (e)=>{ if (e.key.toLowerCase() === 'v' && document.activeElement.tagName.toLowerCase() !== 'input' && document.activeElement.tagName.toLowerCase() !== 'textarea') { toggleDisplayMode(); } });
+    </script>
+</body>
+</html>
